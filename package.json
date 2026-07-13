@@ -1,0 +1,25 @@
+{
+    "name": "redis-to-postgres",
+    "version": "1.0.0",
+    "description": "",
+    "scripts": {
+        "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@types/node": "^26.1.1",
+        "nodemon": "^3.1.14",
+        "ts-node": "^10.9.2",
+        "typescript": "5.4"
+    },
+    "dependencies": {
+        "net": "^1.0.2",
+        "pg": "^8.22.0",
+        "reflect-metadata": "^0.2.2",
+        "typeorm": "^1.0.0",
+        "winston": "^3.19.0"
+    }
+}
