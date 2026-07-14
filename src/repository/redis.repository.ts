@@ -6,6 +6,17 @@ export class RedisRepository {
         private readonly repository: Repository<RedisEntity>,
     ) {}
 
+    async keys(pattern: string): Promise<string[]> {
+        const rows = await this.repository
+            .createQueryBuilder("cache")
+            .where("cache.key like :pattern", { pattern: pattern.replace("*", '%') })
+            .andWhere(
+                "(cache.expired_at IS NULL OR cache.expired_at > CURRENT_TIMESTAMP)"
+            )
+            .getMany();
+        return rows.map((d) => d.key)
+    }
+
     async get(key: string): Promise<string | null> {
         const row = await this.repository
             .createQueryBuilder("cache")
@@ -20,6 +31,7 @@ export class RedisRepository {
     async set( key: string, value: string): Promise<void> {
         await this.repository.upsert( { key, value }, ["key"] );
     }
+
     async setWithExp( key: string, value: string, expIn: number): Promise<void> {
         await this.repository
         .createQueryBuilder()
