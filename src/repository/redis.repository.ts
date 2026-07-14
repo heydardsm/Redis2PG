@@ -48,4 +48,61 @@ export class RedisRepository {
         )
         .execute();
     }
+
+    async hget(key: string, hkey: string): Promise<any | null> {
+        const result = await this.repository
+            .createQueryBuilder("r")
+            .select(`r.json -> :hkey`, "value")
+            .where("r.key = :key", { key })
+            .andWhere(
+                "(r.expired_at IS NULL OR r.expired_at > CURRENT_TIMESTAMP)"
+            )
+            .setParameter("hkey", hkey)
+            .getRawOne();
+
+        return result?.value ?? null;
+    }
+
+    async hset(key: string, hkeys: string[], hvalues: any[]): Promise<void> {
+        const json: Record<string, any> = {};
+
+        for (let i = 0; i < hkeys.length; i++) {
+            json[hkeys[i]] = hvalues[i];
+        }
+        console.log(key, hkeys, hvalues)
+        await this.repository
+        .createQueryBuilder()
+        .insert()
+        .into(RedisEntity)
+        .values({
+            key,
+            type: "H",
+            value: "",
+            json,
+        })
+        .orUpdate(
+            ["json", "type"],
+            ["key"],
+            {
+                overwriteCondition: {
+                    where: "TRUE",
+                },
+            },
+        )
+        .setParameter("json", JSON.stringify(json))
+        .execute();
+
+    }
+
+    async hgetall(key: string): Promise<Record<string, any> | null> {
+        const result = await this.repository
+            .createQueryBuilder("r")
+            .select("r.json", "json")
+            .where("r.key = :key", { key })
+            .andWhere(
+                "(r.expired_at IS NULL OR r.expired_at > CURRENT_TIMESTAMP)"
+            )
+            .getRawOne();
+        return result?.json ?? null;
+    }
 }

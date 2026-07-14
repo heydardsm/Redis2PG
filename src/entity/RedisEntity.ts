@@ -9,6 +9,12 @@ export class RedisEntity {
     @Column({ type: "text" })
     value: string;
 
+    @Column({type: "varchar", default: "S"})
+    type: string;
+
+    @Column({type: "jsonb", nullable: true, default: null})
+    json: Record<string, any> | null;
+
     @Column({type: "timestamp", nullable: true, default: null })
     expired_at: Date | null;
 }
