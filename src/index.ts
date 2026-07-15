@@ -5,6 +5,7 @@ import { commandManager } from "./commandManager";
 import { RedisEntity } from "./entity/RedisEntity";
 import { RedisRepository } from "./repository/redis.repository";
 import { logger } from "./logger";
+import { cleanupExpired } from "./cleanup";
 
 const PORT = 3000;
 
@@ -49,6 +50,15 @@ async function bootstrap() {
         server.listen(PORT, () => {
             logger.info(`Echo server listening`, {port: PORT});
         });
+
+        let cleanupExpiredLock = false;
+        setInterval(async () => {
+            if (cleanupExpiredLock) { return ;};
+            cleanupExpiredLock = true;
+            await cleanupExpired(redisRepository);
+            cleanupExpiredLock = false;
+        }, 10_000)
+
     } catch (err) {
         logger.error("Failed to start application:", {error: err});
         process.exit(1);
