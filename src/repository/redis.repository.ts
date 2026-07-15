@@ -1,10 +1,38 @@
-import { Repository } from "typeorm";
+import { QueryRunner, Repository } from "typeorm";
 import { RedisEntity } from "../entity/RedisEntity";
+import { AppDataSource } from "../db";
 
 export class RedisRepository {
     constructor(
         private readonly repository: Repository<RedisEntity>,
     ) {}
+
+    async createQueryRunner(): Promise<QueryRunner> {
+        const queryRunner = AppDataSource.createQueryRunner()
+        await queryRunner.connect()
+        return queryRunner;
+    }
+
+    async selectToCleanUp(batchSize: number, queryRunner: QueryRunner): Promise<RedisEntity[]>{
+        return await queryRunner.manager
+            .createQueryBuilder(RedisEntity, "redis")
+            .select("redis.key")
+            .where("redis.expired_at IS NOT NULL")
+            .andWhere("redis.expired_at <= CURRENT_TIMESTAMP")
+            .setLock("pessimistic_write")
+            .setOnLocked("skip_locked")
+            .limit(batchSize)
+            .getMany();
+    }
+
+    async cleanUp(keys: string[], queryRunner: QueryRunner) {
+        await queryRunner.manager
+        .createQueryBuilder()
+        .delete()
+        .from(RedisEntity)
+        .where("key IN (:...keys)", { keys })
+        .execute();
+    }
 
     async keys(pattern: string): Promise<string[]> {
         const rows = await this.repository
