@@ -1,0 +1,26 @@
+services:
+  redis2pg:
+    image: redis2pg:latest
+    container_name: redis2pg
+    ports:
+      - "3000:3000"
+    environment:
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_USER: redis
+      PG_PASSWORD: redis
+      PG_NAME: redis
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: redis
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
