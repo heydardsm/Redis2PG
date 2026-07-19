@@ -1,20 +1,14 @@
-import { decode, decodeError } from "./parser";
+import { decode, decodeError, decodeErrorWrongType } from "./parser";
 import { RedisRepository } from "./repository/redis.repository";
 import { compareCommand } from "./utils";
-import {
-    validateGet,
-    validateHget,
-    validateHset,
-    validateKeys,
-    validateSet
-} from "./validation";
+import * as validation from "./validation";
 
 export async function commandManager(command: string[], redisRepository: RedisRepository): Promise<Buffer> {
     if (compareCommand(command[0], 'PING')) {
         return Buffer.from("+PONG\r\n")
     }
     if (compareCommand(command[0], 'SET')) {
-        const error = validateSet(command);
+        const error = validation.validateSet(command);
         if (error) { return Buffer.from(decodeError(error)) };
 
         if (command.includes('px')) {
@@ -30,18 +24,21 @@ export async function commandManager(command: string[], redisRepository: RedisRe
     }
 
     if (compareCommand(command[0], 'GET')) {
-        const error = validateGet(command);
+        const error = validation.validateGet(command);
         if (error) { return Buffer.from(decodeError(error)) };
 
         const value = await redisRepository.get(command[1]);
         if (value === null) {
             return Buffer.from("$-1\r\n")
         }
-        return Buffer.from(decode(value))
+        if (value.type !== 'S') {
+            return Buffer.from(decodeErrorWrongType());
+        }
+        return Buffer.from(decode(value.value))
     }
 
     if (compareCommand(command[0], 'KEYS')) {
-        const error = validateKeys(command);
+        const error = validation.validateKeys(command);
         if (error) { return Buffer.from(decodeError(error)) };
 
         const value = await redisRepository.keys(command[1]);
@@ -49,16 +46,24 @@ export async function commandManager(command: string[], redisRepository: RedisRe
     }
 
     if (compareCommand(command[0], 'HGET')) {
-        const error = validateHget(command);
+        const error = validation.validateHget(command);
         if (error) { return Buffer.from(decodeError(error)) };
 
-        const value = await redisRepository.hget(command[1], command[2]);
-        return Buffer.from(decode(value))
+        const value = await redisRepository.get(command[1]);
+        if (value && value.type !== 'H') {
+            return Buffer.from(decodeErrorWrongType());
+        }
+        return Buffer.from(decode(value &&  value.json[command[2]] ? value.json[command[2]] : null))
     }
 
     if (compareCommand(command[0], 'HSET')) {
-        const error = validateHset(command);
+        const error = validation.validateHset(command);
         if (error) { return Buffer.from(decodeError(error)) };
+
+        const value = await redisRepository.get(command[1]);
+        if (value && value.type !== 'H') {
+            return Buffer.from(decodeErrorWrongType());
+        }
 
         const hkeys: string[] = [];
         const hvalues: string[] = [];
@@ -72,8 +77,13 @@ export async function commandManager(command: string[], redisRepository: RedisRe
     }
 
     if (compareCommand(command[0], 'HGETALL')) {
-        const error = validateHset(command);
+        const error = validation.validateHset(command);
         if (error) { return Buffer.from(decodeError(error)) };
+
+        const value = await redisRepository.get(command[1]);
+        if (value && value.type !== 'H') {
+            return Buffer.from(decodeErrorWrongType());
+        }
 
         const result = await redisRepository.hgetall(command[1]);
         if (result === null) {

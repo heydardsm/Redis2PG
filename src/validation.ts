@@ -25,12 +25,12 @@ export function validateKeys(command: string[]): string|null {
 }
 
 export function validateHget(command: string[]): string|null {
-    if (command.length == 2) {return null}; 
+    if (command.length == 3) {return null}; 
     return 'wrong number of arguments for \'hget\' command';
 }
 
 export function validateHset(command: string[]): string|null {
-    if (command.length == 3) {return null}; 
+    if (command.length == 4) {return null}; 
     return 'wrong number of arguments for HMSET';
 }
 

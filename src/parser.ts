@@ -62,6 +62,14 @@ export function decodeError(message: string): Buffer {
     ]);
 }
 
+export function decodeErrorWrongType(): Buffer {
+    return Buffer.concat([
+        Buffer.from("-WRONGTYPE "),
+        Buffer.from(`Operation against a key holding the wrong kind of value`),
+        SEPARATOR,
+    ]);
+}
+
 export function decode(
     message: string | number | Array<string | number | null> | null,
     end = true

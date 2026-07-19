@@ -45,7 +45,7 @@ export class RedisRepository {
         return rows.map((d) => d.key)
     }
 
-    async get(key: string): Promise<string | null> {
+    async get(key: string): Promise<RedisEntity | null> {
         const row = await this.repository
             .createQueryBuilder("cache")
             .where("cache.key = :key", { key })
@@ -53,11 +53,11 @@ export class RedisRepository {
                 "(cache.expired_at IS NULL OR cache.expired_at > CURRENT_TIMESTAMP)"
             )
             .getOne();
-        return row?.value ?? null;
+        return row ?? null;
     }
 
     async set( key: string, value: string): Promise<void> {
-        await this.repository.upsert( { key, value }, ["key"] );
+        await this.repository.upsert( { key, value, type: 'S' }, ["key"] );
     }
 
     async setWithExp( key: string, value: string, expIn: number): Promise<void> {
@@ -75,20 +75,6 @@ export class RedisRepository {
             ["key"],
         )
         .execute();
-    }
-
-    async hget(key: string, hkey: string): Promise<any | null> {
-        const result = await this.repository
-            .createQueryBuilder("r")
-            .select(`r.json -> :hkey`, "value")
-            .where("r.key = :key", { key })
-            .andWhere(
-                "(r.expired_at IS NULL OR r.expired_at > CURRENT_TIMESTAMP)"
-            )
-            .setParameter("hkey", hkey)
-            .getRawOne();
-
-        return result?.value ?? null;
     }
 
     async hset(key: string, hkeys: string[], hvalues: any[]): Promise<void> {
