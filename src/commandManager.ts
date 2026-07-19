@@ -1,7 +1,13 @@
 import { decode, decodeError } from "./parser";
 import { RedisRepository } from "./repository/redis.repository";
 import { compareCommand } from "./utils";
-import { validateGet, validateSet } from "./validation";
+import {
+    validateGet,
+    validateHget,
+    validateHset,
+    validateKeys,
+    validateSet
+} from "./validation";
 
 export async function commandManager(command: string[], redisRepository: RedisRepository): Promise<Buffer> {
     if (compareCommand(command[0], 'PING')) {
@@ -9,9 +15,8 @@ export async function commandManager(command: string[], redisRepository: RedisRe
     }
     if (compareCommand(command[0], 'SET')) {
         const error = validateSet(command);
-        if (error) {
-            return Buffer.from(decodeError(error));
-        };
+        if (error) { return Buffer.from(decodeError(error)) };
+
         if (command.includes('px')) {
             await redisRepository.setWithExp(
                 command[1],
@@ -26,9 +31,8 @@ export async function commandManager(command: string[], redisRepository: RedisRe
 
     if (compareCommand(command[0], 'GET')) {
         const error = validateGet(command);
-        if (error) {
-            return Buffer.from(decodeError(error));
-        };
+        if (error) { return Buffer.from(decodeError(error)) };
+
         const value = await redisRepository.get(command[1]);
         if (value === null) {
             return Buffer.from("$-1\r\n")
@@ -37,16 +41,25 @@ export async function commandManager(command: string[], redisRepository: RedisRe
     }
 
     if (compareCommand(command[0], 'KEYS')) {
+        const error = validateKeys(command);
+        if (error) { return Buffer.from(decodeError(error)) };
+
         const value = await redisRepository.keys(command[1]);
         return Buffer.from(decode(value))
     }
 
     if (compareCommand(command[0], 'HGET')) {
+        const error = validateHget(command);
+        if (error) { return Buffer.from(decodeError(error)) };
+
         const value = await redisRepository.hget(command[1], command[2]);
         return Buffer.from(decode(value))
     }
 
     if (compareCommand(command[0], 'HSET')) {
+        const error = validateHset(command);
+        if (error) { return Buffer.from(decodeError(error)) };
+
         const hkeys: string[] = [];
         const hvalues: string[] = [];
 
@@ -59,6 +72,9 @@ export async function commandManager(command: string[], redisRepository: RedisRe
     }
 
     if (compareCommand(command[0], 'HGETALL')) {
+        const error = validateHset(command);
+        if (error) { return Buffer.from(decodeError(error)) };
+
         const result = await redisRepository.hgetall(command[1]);
         if (result === null) {
             return Buffer.from("$-1\r\n")
