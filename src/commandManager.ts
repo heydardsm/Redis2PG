@@ -87,6 +87,18 @@ export async function commandManager(command: string[], redisRepository: RedisRe
         return Buffer.from("+OK\r\n")
     }
 
+    if (compareCommand(command[0], 'HDEL')) {
+        const error = validation.validateHdel(command);
+        if (error) { return Buffer.from(decodeError(error)) };
+
+        const value = await redisRepository.get(command[1]);
+        if (value && value.type !== 'H') {
+            return Buffer.from(decodeErrorWrongType());
+        }
+        const count = await redisRepository.hdel(command[1], command.slice(2));
+        return Buffer.from(decode(count))
+    }
+
     if (compareCommand(command[0], 'HGETALL')) {
         const error = validation.validateHset(command);
         if (error) { return Buffer.from(decodeError(error)) };
@@ -101,6 +113,13 @@ export async function commandManager(command: string[], redisRepository: RedisRe
             return Buffer.from("$-1\r\n")
         }
         return Buffer.from(decode(Object.entries(result).flat()))
+    }
+
+    if (compareCommand(command[0], 'FLUSHDB')) {
+        const error = validation.validateFlushdb(command);
+        if (error) { return Buffer.from(decodeError(error)) };
+        await redisRepository.flushdb();
+        return Buffer.from("+OK\r\n")
     }
     
     return Buffer.from(decodeError(`unknown command \`${command[0]}\``));

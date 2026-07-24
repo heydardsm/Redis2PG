@@ -39,8 +39,18 @@ export function validateHset(command: string[]): string|null {
     return 'wrong number of arguments for HMSET';
 }
 
+export function validateHdel(command: string[]): string|null {
+    if (command.length >= 3 ) {return null}; 
+    return 'wrong number of arguments for HDEL';
+}
+
 export function validateHgetall(command: string[]): string|null {
     if (command.length == 2) {return null}; 
     return 'wrong number of arguments for \'hgetall\' command';
+}
+
+export function validateFlushdb(command: string[]): string|null {
+    if (command.length === 1 ) {return null}; 
+    return 'syntax error';
 }
 

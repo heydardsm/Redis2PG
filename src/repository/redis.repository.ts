@@ -82,10 +82,9 @@ export class RedisRepository {
             return count;
         } catch (err) {
             await queryRunner.rollbackTransaction();
-            return count;
+            return 0;
         } finally {
             await queryRunner.release();
-            return count;
         }
     }
 
@@ -137,6 +136,49 @@ export class RedisRepository {
 
     }
 
+    async hdel(key: string, hkeys: string[]): Promise<number> {
+        const queryRunner = await this.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+        let count = 0;
+        try {
+            const row = await queryRunner.manager
+                .createQueryBuilder(RedisEntity, 'redis')
+                .select('redis.json')
+                .where('redis.key = :key', { key })
+                .setLock('pessimistic_write')
+                .setOnLocked('skip_locked')
+                .getOne();
+            if (!row) {
+                await queryRunner.rollbackTransaction();
+                return count;
+            }
+            const existingKeys = Object.keys(row.json);
+            const matchedKeys = hkeys.filter(k => existingKeys.includes(k));
+            count = matchedKeys.length;
+            if (count === 0) {
+                await queryRunner.commitTransaction();
+                return count;
+            }
+            const keysLiteral = matchedKeys.map(k => `'${k}'`).join(', ');
+            await queryRunner.manager
+            .createQueryBuilder()
+            .update(RedisEntity)
+            .set({
+                json: () => `json - ARRAY[${keysLiteral}]`
+            })
+            .where('key = :key', { key })
+            .execute();
+            await queryRunner.commitTransaction();
+            return count;
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            return 0;
+        } finally {
+            await queryRunner.release();
+        }
+    }
+
     async hgetall(key: string): Promise<Record<string, any> | null> {
         const result = await this.repository
             .createQueryBuilder("r")
@@ -147,5 +189,9 @@ export class RedisRepository {
             )
             .getRawOne();
         return result?.json ?? null;
+    }
+
+    async flushdb(): Promise<void> {
+        await this.repository.deleteAll();
     }
 }
