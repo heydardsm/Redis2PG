@@ -19,6 +19,11 @@ export function validateSet(command: string[]): string|null {
     return 'syntax error';
 }
 
+export function validateDel(command: string[]): string|null {
+    if (command.length >= 2) {return null};
+    return 'wrong number of arguments for \'del\' command';
+}
+
 export function validateKeys(command: string[]): string|null {
     if (command.length == 2) {return null}; 
     return 'wrong number of arguments for \'keys\' command';

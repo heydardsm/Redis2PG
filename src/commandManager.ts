@@ -37,6 +37,17 @@ export async function commandManager(command: string[], redisRepository: RedisRe
         return Buffer.from(decode(value.value))
     }
 
+    if (compareCommand(command[0], 'DEL')) {
+        const error = validation.validateGet(command);
+        if (error) { return Buffer.from(decodeError(error)) };
+
+        const value = await redisRepository.del(command.slice(1));
+        if (value === null) {
+            return Buffer.from("$-1\r\n")
+        }
+        return Buffer.from(decode(value))
+    }
+
     if (compareCommand(command[0], 'KEYS')) {
         const error = validation.validateKeys(command);
         if (error) { return Buffer.from(decodeError(error)) };

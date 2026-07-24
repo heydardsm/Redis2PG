@@ -1,4 +1,4 @@
-import { QueryRunner, Repository } from "typeorm";
+import { In, QueryRunner, Repository } from "typeorm";
 import { RedisEntity } from "../entity/RedisEntity";
 import { AppDataSource } from "../db";
 
@@ -58,6 +58,35 @@ export class RedisRepository {
 
     async set( key: string, value: string): Promise<void> {
         await this.repository.upsert( { key, value, type: 'S' }, ["key"] );
+    }
+
+    async del( keys: string[]): Promise<number> {
+        const queryRunner = await this.createQueryRunner();
+        await queryRunner.startTransaction();
+        let count = 0;
+        try {
+            const row = await queryRunner.manager
+            .createQueryBuilder(RedisEntity, "redis")
+            .select("redis.key")
+            .where("redis.key IN (:...keys)", { keys })
+            .setLock("pessimistic_write")
+            .setOnLocked("skip_locked")
+            .getRawMany();
+            count = row.length;
+            await queryRunner.manager
+            .createQueryBuilder(RedisEntity, "redis")
+            .delete()
+            .from(RedisEntity)
+            .where("redis.key IN (:...keys)", { keys })
+            .execute();
+            return count;
+        } catch (err) {
+            await queryRunner.rollbackTransaction();
+            return count;
+        } finally {
+            await queryRunner.release();
+            return count;
+        }
     }
 
     async setWithExp( key: string, value: string, expIn: number): Promise<void> {
